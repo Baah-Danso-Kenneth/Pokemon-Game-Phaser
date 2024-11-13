@@ -8,11 +8,11 @@ import healthBarGreenMiddleAssetHealthValue from '../../assets/images/kenneys-as
 import healthBarGreenLeftAssetHealthValue from '../../assets/images/kenneys-assets/ui-space-expansion/barHorizontal_green_left.png'
 import carnoMonster from '../../assets/images/monster-tamer/monsters/carnodusk.png'
 import igniteMonster from '../../assets/images/monster-tamer/monsters/iguanignite.png'
+import cursorImage from '../../assets/images/monster-tamer/ui/cursor.png'
 
 
 
-
-import { BACKGROUND_KEYS, BATTLE_ASSET_KEYS, HEALTH_BAR_ASSET_KEYS, MONSTER_ASSET_KEYS } from "../assets/assets-key";
+import { BACKGROUND_KEYS, BATTLE_ASSET_KEYS, HEALTH_BAR_ASSET_KEYS, MONSTER_ASSET_KEYS, UI_ASSET_KEYS } from "../assets/assets-key";
 
 export class PreloadScene extends Phaser.Scene{
     constructor(){
@@ -27,6 +27,7 @@ export class PreloadScene extends Phaser.Scene{
         this.load.image(HEALTH_BAR_ASSET_KEYS.RIGHT_CAP, healthBarGreenRightAssetHealthValue)
         this.load.image(MONSTER_ASSET_KEYS.CARNOUSK, carnoMonster)
         this.load.image(MONSTER_ASSET_KEYS.IGNITE, igniteMonster)
+        this.load.image(UI_ASSET_KEYS.CURSOR, cursorImage)
 
     }
 
