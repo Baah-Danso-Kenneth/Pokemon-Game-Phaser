@@ -3,6 +3,8 @@ import { SCENE_KEYS } from "./scene-keys";
 import { BACKGROUND_KEYS, BATTLE_ASSET_KEYS, HEALTH_BAR_ASSET_KEYS, MONSTER_ASSET_KEYS } from "../assets/assets-key";
 import { BattleMenu } from "../battles/ui/battle-menu";
 import { DIRECTION } from "../common/direction";
+import { Background } from "../battles/ui/background.js";
+import { HealthBar } from "../battles/ui/health-bar.js";
 
 
 export class BattleScene extends Phaser.Scene{
@@ -17,7 +19,9 @@ export class BattleScene extends Phaser.Scene{
 
 
     create(){
-        this.add.image(0,0,BACKGROUND_KEYS.FOREST).setOrigin(0)
+        const background = new Background(this);
+        background.showForest();
+        // this.add.image(0,0,BACKGROUND_KEYS.FOREST).setOrigin(0)
 
         this.add.image(768, 144, MONSTER_ASSET_KEYS.CARNOUSK)
         this.add.image(256, 316, MONSTER_ASSET_KEYS.IGNITE,0).setFlipX(true)
@@ -43,7 +47,7 @@ export class BattleScene extends Phaser.Scene{
             [   
                 this.add.image(0,0, BATTLE_ASSET_KEYS.HEALTH_BAR_BACKGROUND).setOrigin(0),
                 playerMonsterName,
-                this.#createHealth(34,34),
+                new HealthBar(this,34,34).container,
 
                 this.add.text(
                     playerMonsterName.width + 35,
@@ -85,7 +89,8 @@ export class BattleScene extends Phaser.Scene{
                     this.add.image(
                         0,0, BATTLE_ASSET_KEYS.HEALTH_BAR_BACKGROUND).setOrigin(0),
                         MonsterName,
-                    this.#createHealth(34,34),
+                        new HealthBar(this,34,34).container,
+                   
     
                     this.add.text(
                         MonsterName.width + 35,
@@ -132,6 +137,15 @@ export class BattleScene extends Phaser.Scene{
         const  wasSpaceKeyPressed = Phaser.Input.Keyboard.JustDown(this.#cursorKeys.space);
         if(wasSpaceKeyPressed){
             this.#battleMenu.handlePlayerInput('OK');
+
+            if(this.#battleMenu.selectedAttack === undefined){
+                return;
+            }
+            console.log(`Player selected the following move: ${this.#battleMenu.selectedAttack}`)
+            this.#battleMenu.hideMonsterAttackSubMenu();
+            this.#battleMenu.updateInfoPaneMessageAndWaitForInput(['Your monster attacks the enemy'],()=>{
+                this.#battleMenu.showMainBattleMenu();
+            })
             return;
         }
         if(Phaser.Input.Keyboard.JustDown(this.#cursorKeys.shift)){
@@ -157,27 +171,6 @@ export class BattleScene extends Phaser.Scene{
             this.#battleMenu.handlePlayerInput(selectedDirection)
         }
     }
-
-
-    #createHealth(x,y){
-        const scaleY=0.7;
-
-        const leftCap = this.add.image(
-            x,y,HEALTH_BAR_ASSET_KEYS.LEFT_CAP 
-        ).setOrigin(0,0.5)
-        .setScale(1, scaleY)
-        const middleCap = this.add.image(
-            leftCap.x + leftCap.width,y, HEALTH_BAR_ASSET_KEYS.MIDDLE
-        ).setOrigin(0,0.5)
-        .setScale(1, scaleY)
-        middleCap.displayWidth=360;
-        const rightCap = this.add.image(
-            middleCap.x + middleCap.displayWidth,y, HEALTH_BAR_ASSET_KEYS.RIGHT_CAP
-        ).setOrigin(0,0.5)
-        .setScale(1,scaleY)
-        return this.add.container(x,y,[leftCap, middleCap, rightCap]);
-    }
-
 
 
 }

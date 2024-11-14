@@ -2,6 +2,7 @@ import { MONSTER_ASSET_KEYS, UI_ASSET_KEYS } from "../../assets/assets-key";
 import { DIRECTION } from "../../common/direction";
 import { ATTACK_MOVE_OPTIONS, BATTLE_MENU_OPTIONS, ACTIVE_BATTLE_MENU } from "./battle-menu-option.js";
 import { BATTLE_UI_TEXT_STYLE } from "./battle-menu-config.js";
+import { exhaustiveGuard } from "../../utils/guard.js";
 
 const BATTLE_MENU_CURSOR_POS = Object.freeze({
     x: 42,
@@ -36,6 +37,10 @@ const BATTLE_MENU_CURSOR_POS = Object.freeze({
     #selectedAttackMenuOption;
     /** @type {import('./battle-menu-options.js').ActiveBattleMenu} */
     #activeBattleMenu;
+    #queuedInfoMessages;
+    #queuedInfoPanelCallback;
+    #waitingForPlayerInput;
+    #selectAttackIndex;
   
     /**
      *
@@ -46,9 +51,22 @@ const BATTLE_MENU_CURSOR_POS = Object.freeze({
       this.#activeBattleMenu = ACTIVE_BATTLE_MENU.BATTLE_MAIN
       this.#selectedBattleMenuOption = BATTLE_MENU_OPTIONS.FIGHT;
       this.#selectedAttackMenuOption = ATTACK_MOVE_OPTIONS.MOVE_1;
+      this.#queuedInfoMessages = [];
+      this.#queuedInfoPanelCallback = undefined
+      this.#selectAttackIndex = undefined
+      this.#waitingForPlayerInput = false;
+
+
       this.#createMainInfoPane();
       this.#createMainBattleMenu();
       this.#createMonsterAttackSubMenu();
+    }
+
+    get selectedAttack(){
+        if(this.#activeBattleMenu === ACTIVE_BATTLE_MENU.BATTLE_MOVE_SELECT){
+            return this.#selectAttackIndex;
+        }
+        return undefined;
     }
   
     showMainBattleMenu() {
@@ -60,6 +78,7 @@ const BATTLE_MENU_CURSOR_POS = Object.freeze({
   
       this.#selectedBattleMenuOption = BATTLE_MENU_OPTIONS.FIGHT;
       this.#mainBattleMenuCursorPhaserImageGameObject.setPosition(BATTLE_MENU_CURSOR_POS.x, BATTLE_MENU_CURSOR_POS.y);
+      this.#selectAttackIndex = undefined;
     }
   
     hideMainBattleMenu() {
@@ -82,13 +101,29 @@ const BATTLE_MENU_CURSOR_POS = Object.freeze({
      * @param {import('../../../common/direction.js').Direction|'OK'|'CANCEL'} input
      */
     handlePlayerInput(input) {
-      console.log(input);
+
+        if(this.#waitingForPlayerInput && (input === 'CANCEL' || input ==='OK')){
+            this.#updateInfoPaneWithMessage();
+            return;
+        }
+
+
       if (input === 'CANCEL') {
-        this.hideMonsterAttackSubMenu();
-        this.showMainBattleMenu();
+            this.#switchToMainBattleMenu();
         return;
       }
       if (input === 'OK') {
+        if(this.#activeBattleMenu === ACTIVE_BATTLE_MENU.BATTLE_MAIN){
+            // TODO
+            this.#handlePlayerChooseMainBattleOption();
+            return;
+        }
+
+        if(this.#activeBattleMenu === ACTIVE_BATTLE_MENU.BATTLE_MOVE_SELECT){
+            // TODO
+            this.#handlePlayerChooseAttack();
+            return;
+        }
         this.hideMainBattleMenu();
         this.showMonsterAttackSubMenu();
         return;
@@ -142,6 +177,34 @@ const BATTLE_MENU_CURSOR_POS = Object.freeze({
       ]);
       this.hideMonsterAttackSubMenu();
     }
+
+
+
+    updateInfoPaneMessageAndWaitForInput(messages, callback){
+        this.#queuedInfoPanelCallback = callback;
+        this.#queuedInfoMessages = messages;
+
+
+        this.#updateInfoPaneWithMessage();
+    }
+
+    #updateInfoPaneWithMessage(){
+        this.#waitingForPlayerInput = false;
+        this.#battleTextGameObjectLine1.setText('').setAlpha(1);
+
+        if(this.#queuedInfoMessages.length === 0){
+            if(this.#queuedInfoPanelCallback){
+                this.#queuedInfoPanelCallback();
+                this.#queuedInfoPanelCallback = undefined;
+            }
+            return;
+        }
+
+        const messageToDisplay = this.#queuedInfoMessages.shift();
+        this.#battleTextGameObjectLine1.setText(messageToDisplay);
+        this.#waitingForPlayerInput = true;
+    }
+
   
     #createMainInfoPane() {
       const padding = 4;
@@ -384,4 +447,69 @@ const BATTLE_MENU_CURSOR_POS = Object.freeze({
           exhaustiveGuard(this.#selectedAttackMenuOption);
       }
     }
+
+    #switchToMainBattleMenu(){
+        this.hideMonsterAttackSubMenu();
+        this.showMainBattleMenu();
+    }
+
+    #handlePlayerChooseMainBattleOption(){
+        this.hideMainBattleMenu();
+        
+        if(this.#selectedBattleMenuOption === BATTLE_MENU_OPTIONS.FIGHT){
+            this.#activeBattleMenu = BATTLE_MENU_OPTIONS.FIGHT
+            this.showMonsterAttackSubMenu()
+            return;
+        }
+
+        if(this.#selectedBattleMenuOption === BATTLE_MENU_OPTIONS.ITEM){
+            this.#activeBattleMenu = BATTLE_MENU_OPTIONS.ITEM
+            this.updateInfoPaneMessageAndWaitForInput(['Your bag is empty....'],()=>{
+                this.#switchToMainBattleMenu();
+            })
+            return;
+        }
+
+        if(this.#selectedBattleMenuOption === BATTLE_MENU_OPTIONS.SWITCH){
+            this.#activeBattleMenu = BATTLE_MENU_OPTIONS.SWITCH
+            this.updateInfoPaneMessageAndWaitForInput(['Your have no monsters in your party....'],()=>{
+                this.#switchToMainBattleMenu();
+            })
+            return;
+        }
+
+
+        if(this.#selectedBattleMenuOption === BATTLE_MENU_OPTIONS.FLEE){
+            this.#activeBattleMenu = BATTLE_MENU_OPTIONS.FLEE
+            this.updateInfoPaneMessageAndWaitForInput(['You Fail to run away....'],()=>{
+                this.#switchToMainBattleMenu();
+            })
+            return;
+        }
+        exhaustiveGuard(this.#selectedBattleMenuOption);
+    }
+
+    #handlePlayerChooseAttack(){
+        let selectedMoveIndex=0;
+        switch(this.#selectedAttackMenuOption){
+            case ATTACK_MOVE_OPTIONS.MOVE_1:
+                selectedMoveIndex =0;
+                break;
+            case ATTACK_MOVE_OPTIONS.MOVE_2:
+                selectedMoveIndex = 1;
+                break;
+            case ATTACK_MOVE_OPTIONS.MOVE_3:
+                selectedMoveIndex = 2;
+                break;
+            case ATTACK_MOVE_OPTIONS.MOVE_4:
+                selectedMoveIndex = 3
+                break;
+            default:
+             exhaustiveGuard(this.#selectedAttackMenuOption)
+        }
+        this.#selectAttackIndex = selectedMoveIndex;
+    }
+
   }
+
+
